@@ -1,0 +1,110 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: quobyte
+  labels:
+    app: quobyte
+spec:
+  ports:
+  - port: 7861
+    name: "quobyte"
+    protocol: "TCP"
+    targetPort: 7861
+  clusterIP: None
+  selector:
+    app: quobyte
+---
+# ssd-storageclass.yaml
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: faster
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: pd-ssd
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: quobyte
+spec:
+  selector:
+    matchLabels:
+      app: quobyte # has to match .spec.template.metadata.labels
+  serviceName: "quobyte"
+  replicas: 4 # by default is 4 
+  template:
+    metadata:
+      labels:
+        app: quobyte # has to match .spec.selector.matchLabels
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: quobyte
+        image: gcr.io/eda-eval/quobyte-kubernetes-server:eddo
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 7861
+          name: quobyte
+        volumeMounts:
+          - name: config
+            mountPath: /etc/quobyte
+          - name: registry
+            mountPath: /var/lib/quobyte/devices/registry
+          - name: metadata
+            mountPath: /var/lib/quobyte/devices/metadata
+          - name: data0
+            mountPath: /var/lib/quobyte/devices/data0
+          - name: data1
+            mountPath: /var/lib/quobyte/devices/data1
+      affinity:
+        podAntiAffinity:
+            requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - quobyte
+              topologyKey: "kubernetes.io/hostname"
+  volumeClaimTemplates:
+  - metadata:
+      name: config
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "standard"
+      resources:
+        requests:
+          storage: 10Gi
+  - metadata:
+      name: registry
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "faster"
+      resources:
+        requests:
+          storage: 25Gi
+  - metadata:
+      name: metadata
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "faster"
+      resources:
+        requests:
+          storage: 100Gi
+  - metadata:
+      name: data0
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "faster"
+      resources:
+        requests:
+          storage: 840Gi
+  - metadata:
+      name: data1
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: "faster"
+      resources:
+        requests:
+          storage: 840Gi
