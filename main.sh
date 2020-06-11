@@ -148,6 +148,4 @@ sed -i "s/__S3__/${_S3}/g" /system.cfg
 /usr/bin/qmgmt systemconfig import /system.cfg
 pkill -9 /usr/bin/quobyte-s3 && /usr/bin/quobyte-s3
 
-rm -f /*.cfg
-
 tail -f /var/log/lastlog

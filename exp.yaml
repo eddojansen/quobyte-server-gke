@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: quobyte-2
+  name: quobyte-ui
 spec:
   type: LoadBalancer
   externalTrafficPolicy: Local
